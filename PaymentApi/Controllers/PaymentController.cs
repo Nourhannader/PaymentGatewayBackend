@@ -124,10 +124,14 @@ namespace PaymentApi.Controllers
             {
                 Amount = (long)(request.Amount * 100),
                 Currency = "usd",
-
+                Confirm = true,
                 PaymentMethod = request.PaymentMethodId,
 
-                Confirm = true
+                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                {
+                    Enabled = true,
+                    AllowRedirects = "never"
+                }
             };
 
 
