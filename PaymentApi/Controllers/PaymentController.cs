@@ -22,9 +22,26 @@ namespace PaymentApi.Controllers
         [HttpPost("hosted-checkout/create-session")]
         public async Task<IActionResult> CreateCheckoutSession(CreateHostedCheckoutDto request)
         {
-            if (request.Amount <= 0)
-                return BadRequest("Amount must be greater than zero.");
+            if (request == null)
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Invalid request."
+                });
 
+            if (request.Amount <= 0)
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Amount must be greater than zero."
+                });
+
+            if (string.IsNullOrWhiteSpace(request.ProductName))
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Product name is required."
+                });
             try
             {
                 var options = new SessionCreateOptions
@@ -57,6 +74,8 @@ namespace PaymentApi.Controllers
 
                 return Ok(new
                 {
+                    Status = 200,
+                    Message = "Checkout session created successfully.",
                     SessionId = session.Id,
                     RedirectUrl = session.Url
                 });
@@ -66,7 +85,19 @@ namespace PaymentApi.Controllers
                 _logger.LogError(ex, ex.Message);
                 return BadRequest(new
                 {
+                    Status=400,
                     Error = ex.StripeError?.Message ?? ex.Message
+               
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected Error");
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    Status = 500,
+                    Error = "An unexpected error occurred."
                 });
             }
         }
@@ -77,9 +108,23 @@ namespace PaymentApi.Controllers
         [HttpPost("embedded-checkout/create-payment-intent")]
         public async Task<IActionResult> CreatePaymentIntent(CreatePaymentIntentDto request)
         {
-            if (request.Amount <= 0)
-                return BadRequest("Amount must be greater than zero.");
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Invalid request."
+                });
+            }
 
+            if (request.Amount <= 0)
+            {
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Amount must be greater than zero."
+                });
+            }
             try
             {
                 var options = new PaymentIntentCreateOptions
@@ -99,6 +144,8 @@ namespace PaymentApi.Controllers
 
                 return Ok(new
                 {
+                    Status = 200,
+                    Message = "Payment Intent created successfully.",
                     PaymentIntentId = paymentIntent.Id,
                     ClientSecret = paymentIntent.ClientSecret
                 });
@@ -108,7 +155,18 @@ namespace PaymentApi.Controllers
                 _logger.LogError(ex, ex.Message);
                 return BadRequest(new
                 {
+                    Status = 400,
                     Error = ex.StripeError?.Message ?? ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected Error");
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    Status = 500,
+                    Error = "An unexpected error occurred."
                 });
             }
         }
@@ -119,35 +177,86 @@ namespace PaymentApi.Controllers
         [HttpPost("direct-checkout/charge-card")]
         public async Task<IActionResult> ChargeCard([FromBody] DirectCardPaymentDto request)
         {
-
-            var options = new PaymentIntentCreateOptions
+            if (request == null)
             {
-                Amount = (long)(request.Amount * 100),
-                Currency = "usd",
-                Confirm = true,
-                PaymentMethod = request.PaymentMethodId,
-
-                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                return BadRequest(new
                 {
-                    Enabled = true,
-                    AllowRedirects = "never"
-                }
-            };
+                    Status = 400,
+                    Error = "Invalid request."
+                });
+            }
 
-
-            var service = new PaymentIntentService();
-
-
-            var intent =
-                await service.CreateAsync(options);
-
-
-            return Ok(new
+            if (request.Amount <= 0)
             {
-                id = intent.Id,
-                status = intent.Status
-            });
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "Amount must be greater than zero."
+                });
+            }
 
+            if (string.IsNullOrWhiteSpace(request.PaymentMethodId))
+            {
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = "PaymentMethodId is required."
+                });
+            }
+
+
+            try
+            {
+                var options = new PaymentIntentCreateOptions
+                {
+                    Amount = Convert.ToInt64(request.Amount * 100),
+                    Currency = "usd",
+
+                    PaymentMethod = request.PaymentMethodId,
+
+                    Confirm = true,
+
+                    AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                    {
+                        Enabled = true,
+                        AllowRedirects = "never"
+                    }
+                };
+
+
+                var service = new PaymentIntentService();
+
+                var intent = await service.CreateAsync(options);
+
+
+                return Ok(new
+                {
+                    Status = 200,
+                    Message = "Payment completed successfully.",
+                    PaymentIntentId = intent.Id,
+                    PaymentStatus = intent.Status
+                });
+            }
+            catch (StripeException ex)
+            {
+                _logger.LogError(ex, "Stripe Error");
+
+                return BadRequest(new
+                {
+                    Status = 400,
+                    Error = ex.StripeError?.Message ?? ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected Error");
+
+                return StatusCode(500, new
+                {
+                    Status = 500,
+                    Error = "An unexpected error occurred."
+                });
+            }
         }
     }
 }
