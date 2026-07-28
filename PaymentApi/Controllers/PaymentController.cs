@@ -10,10 +10,11 @@ namespace PaymentApi.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly ILogger<PaymentController> _logger;
-
-        public PaymentController(ILogger<PaymentController> logger)
+        private readonly IConfiguration _configuration;
+        public PaymentController(ILogger<PaymentController> logger, IConfiguration configuration)
         {
             _logger = logger;
+            _configuration = configuration;
         }
 
         // ==========================================================
@@ -258,5 +259,80 @@ namespace PaymentApi.Controllers
                 });
             }
         }
+
+        // ==========================================================
+        // 2. Webhook
+        // ==========================================================
+        //[HttpPost("webhook")]
+        //public async Task<IActionResult> StripeWebhook()
+        //{
+        //    var json = await new StreamReader(Request.Body).ReadToEndAsync();
+
+        //    var stripeSignature = Request.Headers["Stripe-Signature"];
+
+        //    var webhookSecret = _configuration["Stripe:WebhookSecret"];
+
+        //    try
+        //    {
+        //        var stripeEvent = EventUtility.ConstructEvent(
+        //            json,
+        //            stripeSignature,
+        //            webhookSecret
+        //        );
+
+        //        switch (stripeEvent.Type)
+        //        {
+        //            case "checkout.session.completed":
+
+        //                var session = stripeEvent.Data.Object as Session;
+
+        //                _logger.LogInformation(
+        //                    "Checkout completed: {SessionId}",
+        //                    session?.Id);
+
+        //                // TODO:
+        //                // Update order in database
+        //                // Save payment status
+        //                // Send confirmation email
+
+        //                break;
+
+        //            case "payment_intent.succeeded":
+
+        //                var paymentIntent =
+        //                    stripeEvent.Data.Object as PaymentIntent;
+
+        //                _logger.LogInformation(
+        //                    "Payment succeeded: {PaymentIntentId}",
+        //                    paymentIntent?.Id);
+
+        //                break;
+
+        //            case "payment_intent.payment_failed":
+
+        //                var failedIntent =
+        //                    stripeEvent.Data.Object as PaymentIntent;
+
+        //                _logger.LogWarning(
+        //                    "Payment failed: {PaymentIntentId}",
+        //                    failedIntent?.Id);
+
+        //                break;
+        //        }
+
+        //        return Ok();
+        //    }
+        //    catch (StripeException ex)
+        //    {
+        //        _logger.LogError(ex, ex.Message);
+
+        //        return BadRequest(new
+        //        {
+        //            Error = ex.Message
+        //        });
+        //    }
+        //}
+   
+    
     }
 }
